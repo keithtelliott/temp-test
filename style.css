@@ -1,0 +1,344 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+#timer {
+  font-size: 48px;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px 0;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+button,
+input {
+  font-size: 16px;
+}
+
+button {
+  padding: 14px 18px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#startButton {
+  background: #2e7d32;
+  color: white;
+}
+
+#stopButton {
+  background: #f9a825;
+}
+
+#resetButton {
+  background: #c62828;
+  color: white;
+}
+
+.runner-management {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+#runnerNameInput {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  width: 100%;
+}
+
+#addRunnerButton {
+  background: #1565c0;
+  color: white;
+}
+
+.runner-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  color: #666;
+  border: 1px dashed #ddd;
+}
+
+.runner-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.3s ease;
+}
+
+.runner-card.finished {
+  opacity: 0.7;
+  background: #f5f5f5;
+}
+
+.runner-label {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+  text-align: center;
+  padding: 4px 0;
+  min-height: 24px;
+}
+
+.runner-button {
+  color: white;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.runner-button.lap-button {
+  background: #1565c0;
+}
+
+.runner-button.lap-button:hover:not(:disabled) {
+  background: #0d47a1;
+}
+
+.runner-button.finish-button {
+  background: #d32f2f;
+}
+
+.runner-button.finish-button:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.runner-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.summary-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.summary-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.summary-item {
+  margin: 8px 0;
+  font-size: 15px;
+}
+
+.summary-empty {
+  color: #666;
+  font-size: 15px;
+}
+
+.summary-chart {
+  display: block;
+}
+
+.chart-wrapper {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 16px;
+  align-items: flex-end;
+  min-height: 260px;
+}
+
+.chart-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #555;
+  min-height: 220px;
+}
+
+.chart-tick {
+  text-align: right;
+  padding-right: 8px;
+}
+
+.chart-grid {
+  display: flex;
+  gap: 18px;
+  align-items: flex-end;
+  height: 220px;
+  position: relative;
+}
+
+.chart-grid::before,
+.chart-grid::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.chart-grid::before {
+  top: 0;
+}
+
+.chart-grid::after {
+  bottom: 0;
+}
+
+.runner-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.runner-bars {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 220px;
+  border-left: 1px solid #ddd;
+  padding-left: 8px;
+}
+
+.lap-bar {
+  position: relative;
+  background: #1565c0;
+  border-radius: 10px 10px 0 0;
+  width: 32px;
+  min-height: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  color: white;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.lap-bar:hover {
+  background: #0d47a1;
+}
+
+.lap-number {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  font-weight: 700;
+}
+
+.lap-value {
+  font-size: 11px;
+}
+
+.runner-name {
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
+}
+
+@media (max-width: 840px) {
+  .summary-container {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-grid {
+    gap: 10px;
+  }
+}
+
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th,
+td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+th {
+  background: #eee;
+}
+
+@media (max-width: 640px) {
+  .controls,
+  .runner-management {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-button {
+    font-size: 16px;
+    padding: 16px;
+  }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Track Lap Timer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <h1>Track Lap Timer</h1>
+
+    <div id="timer">00:00.00</div>
+
+    <div class="controls">
+      <button id="startButton">Start Race</button>
+      <button id="stopButton">Stop</button>
+      <button id="resetButton">Reset</button>
+    </div>
+
+    <section class="runner-management">
+      <input id="runnerNameInput" type="text" placeholder="Enter runner name" />
+      <button id="addRunnerButton">Add Runner</button>
+    </section>
+
+    <h2>Runners</h2>
+
+    <div id="runnerButtons" class="runner-list">
+      <p class="empty-state">Add a runner to begin recording laps.</p>
+    </div>
+
+    <h2>Race Summary</h2>
+    <div id="summaryContainer" class="summary-container">
+      <div class="summary-card">
+        <div class="summary-title">Race Statistics</div>
+        <div id="summaryStats"></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">Lap Time Chart</div>
+        <div id="summaryChart" class="summary-chart"></div>
+      </div>
+    </div>
+
+    <h2>Lap Results</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Runner</th>
+          <th>Lap</th>
+          <th>Lap Time</th>
+          <th>Total Time</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+      </tbody>
+    </table>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
