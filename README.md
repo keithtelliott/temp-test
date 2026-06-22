@@ -29,6 +29,8 @@ A simple web app for track coaches to count and time laps during races.
 
 ## Future Ideas
 
+- Create a list of runners
+- Create a meet that includes various races
 - Save race results
 - Export to CSV
 - Support heats

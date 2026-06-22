@@ -10,51 +10,95 @@
   <main class="app">
     <h1>Track Lap Timer</h1>
 
-    <div id="timer">00:00.00</div>
+    <nav class="tab-bar" aria-label="Track Lap Timer sections">
+      <button class="tab-button active" type="button" data-tab="runners">Runners</button>
+      <button class="tab-button" type="button" data-tab="races">Races</button>
+      <button class="tab-button" type="button" data-tab="meet">Meet</button>
+      <button class="tab-button" type="button" data-tab="timer">Timer</button>
+    </nav>
 
-    <div class="controls">
-      <button id="startButton">Start Race</button>
-      <button id="stopButton">Stop</button>
-      <button id="resetButton">Reset</button>
-    </div>
+    <section id="tab-runners" class="tab-panel active" aria-labelledby="Runners">
+      <h2>Runners</h2>
 
-    <section class="runner-management">
-      <input id="runnerNameInput" type="text" placeholder="Enter runner name" />
-      <button id="addRunnerButton">Add Runner</button>
+      <section class="runner-management">
+        <input id="runnerNameInput" type="text" placeholder="Enter runner name" />
+        <button id="addRunnerButton">Add Runner</button>
+      </section>
+
+      <div id="runnerList" class="runner-list-simple">
+        <p class="empty-state">Add a runner to begin recording laps.</p>
+      </div>
     </section>
 
-    <h2>Runners</h2>
+    <section id="tab-races" class="tab-panel" aria-labelledby="Races">
+      <h2>Races</h2>
 
-    <div id="runnerButtons" class="runner-list">
-      <p class="empty-state">Add a runner to begin recording laps.</p>
-    </div>
+      <section class="race-management">
+        <input id="raceNameInput" type="text" placeholder="Enter race name" />
+        <button id="addRaceButton">Add Race</button>
+      </section>
 
-    <h2>Race Summary</h2>
-    <div id="summaryContainer" class="summary-container">
-      <div class="summary-card">
-        <div class="summary-title">Race Statistics</div>
-        <div id="summaryStats"></div>
+      <div id="raceList" class="race-list"></div>
+    </section>
+
+    <section id="tab-meet" class="tab-panel" aria-labelledby="Meet">
+      <h2>Meet</h2>
+
+      <section class="runner-assignment">
+        <select id="meetRunnerSelect" aria-label="Select runner to assign"></select>
+        <select id="meetRaceSelect" aria-label="Select race to assign"></select>
+        <input id="meetHeatInput" type="number" min="1" value="1" aria-label="Enter heat number" />
+        <button id="assignRunnerButton">Assign to Race</button>
+      </section>
+
+      <div id="meetAssignments" class="meet-summary"></div>
+
+      <div id="summaryContainer" class="summary-container">
+        <div class="summary-card">
+          <div class="summary-title">Lap Time Chart</div>
+          <div id="summaryChart" class="summary-chart"></div>
+        </div>
       </div>
-      <div class="summary-card">
-        <div class="summary-title">Lap Time Chart</div>
-        <div id="summaryChart" class="summary-chart"></div>
+
+      <h2>Lap Results</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Runner</th>
+            <th>Race</th>
+            <th>Lap</th>
+            <th>Lap Time</th>
+            <th>Total Time</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+        </tbody>
+      </table>
+
+      <div id="statsContainer" class="summary-container">
+        <div class="summary-card">
+          <div class="summary-title">Race Statistics</div>
+          <div id="summaryStats"></div>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <h2>Lap Results</h2>
+    <section id="tab-timer" class="tab-panel" aria-labelledby="Timer">
+      <h2>Timer</h2>
+      <div id="timer">00:00.00</div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Runner</th>
-          <th>Lap</th>
-          <th>Lap Time</th>
-          <th>Total Time</th>
-        </tr>
-      </thead>
-      <tbody id="resultsBody">
-      </tbody>
-    </table>
+      <div class="controls">
+        <select id="raceSelect" aria-label="Select race and heat to time"></select>
+        <button id="startButton">Start Race</button>
+        <button id="stopButton">Stop</button>
+        <button id="resetButton">Reset</button>
+      </div>
+
+      <div id="runnerButtons" class="runner-list">
+        <p class="empty-state">Assign runners to a race and heat to begin timing.</p>
+      </div>
+    </section>
   </main>
 
   <script src="script.js"></script>

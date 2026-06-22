@@ -14,6 +14,32 @@ h1, h2 {
   text-align: center;
 }
 
+.tab-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 24px;
+}
+
+.tab-button {
+  background: #e8edf3;
+  color: #2b3645;
+  font-weight: 700;
+}
+
+.tab-button.active {
+  background: #1f4b99;
+  color: white;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
 #timer {
   font-size: 48px;
   font-weight: bold;
@@ -31,6 +57,14 @@ h1, h2 {
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: 30px;
+}
+
+.controls select {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: white;
+  min-width: 170px;
 }
 
 button,
@@ -67,10 +101,35 @@ button {
   margin-bottom: 20px;
 }
 
+.runner-assignment {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 #runnerNameInput {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #ccc;
+  width: 100%;
+}
+
+#raceSelect {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: white;
+  min-width: 150px;
+}
+
+#runnerAssignSelect,
+#assignRaceSelect {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: white;
   width: 100%;
 }
 
@@ -80,10 +139,78 @@ button {
 }
 
 .runner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.runner-list-simple {
+  display: grid;
+  gap: 10px;
+}
+
+.runner-list-item {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  font-weight: 700;
+  color: #263238;
+}
+
+.race-list {
+  display: grid;
+  gap: 10px;
+}
+
+.race-list-item {
+  font-weight: 700;
+}
+
+.runner-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.runner-group-title {
+  margin: 0;
+  font-size: 16px;
+  color: #222;
+}
+
+.runner-group-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
-  margin-bottom: 30px;
+}
+
+.race-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.race-summary-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.race-summary-card strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.race-summary-count {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1f4b99;
 }
 
 .empty-state {
@@ -107,9 +234,18 @@ button {
   transition: opacity 0.3s ease;
 }
 
+.runner-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .runner-card.finished {
   opacity: 0.7;
   background: #f5f5f5;
+}
+
+.runner-card.inactive {
+  opacity: 0.65;
 }
 
 .runner-label {
@@ -119,6 +255,13 @@ button {
   text-align: center;
   padding: 4px 0;
   min-height: 24px;
+}
+
+.runner-race {
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  margin-top: -2px;
 }
 
 .runner-button {
