@@ -13,7 +13,9 @@
     <nav class="tab-bar" aria-label="Track Lap Timer sections">
       <button class="tab-button active" type="button" data-tab="runners">Runners</button>
       <button class="tab-button" type="button" data-tab="races">Races</button>
-      <button class="tab-button" type="button" data-tab="meet">Meet</button>
+      <button class="tab-button" type="button" data-tab="meets">Meets</button>
+      <button class="tab-button" type="button" data-tab="meet-setup">Meet Setup</button>
+      <button class="tab-button" type="button" data-tab="results">Results</button>
       <button class="tab-button" type="button" data-tab="timer">Timer</button>
     </nav>
 
@@ -41,17 +43,34 @@
       <div id="raceList" class="race-list"></div>
     </section>
 
-    <section id="tab-meet" class="tab-panel" aria-labelledby="Meet">
-      <h2>Meet</h2>
+    <section id="tab-meets" class="tab-panel" aria-labelledby="Meets">
+      <h2>Meets</h2>
+
+      <section class="meet-management">
+        <input id="meetNameInput" type="text" placeholder="Enter meet name" />
+        <button id="addMeetButton">Add Meet</button>
+      </section>
+
+      <div id="meetList" class="meet-list"></div>
+    </section>
+
+    <section id="tab-meet-setup" class="tab-panel" aria-labelledby="Meet Setup">
+      <h2>Meet Setup</h2>
+      <p class="section-copy">Choose a meet, then coordinate runners by race and heat.</p>
 
       <section class="runner-assignment">
+        <select id="meetSelect" aria-label="Select meet to set up"></select>
         <select id="meetRunnerSelect" aria-label="Select runner to assign"></select>
         <select id="meetRaceSelect" aria-label="Select race to assign"></select>
         <input id="meetHeatInput" type="number" min="1" value="1" aria-label="Enter heat number" />
-        <button id="assignRunnerButton">Assign to Race</button>
+        <button id="assignRunnerButton">Assign to Meet</button>
       </section>
 
       <div id="meetAssignments" class="meet-summary"></div>
+    </section>
+
+    <section id="tab-results" class="tab-panel" aria-labelledby="Results">
+      <h2>Results</h2>
 
       <div id="summaryContainer" class="summary-container">
         <div class="summary-card">
@@ -67,6 +86,7 @@
           <tr>
             <th>Runner</th>
             <th>Race</th>
+            <th>Heat</th>
             <th>Lap</th>
             <th>Lap Time</th>
             <th>Total Time</th>
@@ -86,13 +106,17 @@
 
     <section id="tab-timer" class="tab-panel" aria-labelledby="Timer">
       <h2>Timer</h2>
+      <p class="section-copy">Select a meet and race before starting the clock.</p>
       <div id="timer">00:00.00</div>
 
       <div class="controls">
-        <select id="raceSelect" aria-label="Select race and heat to time"></select>
-        <button id="startButton">Start Race</button>
-        <button id="stopButton">Stop</button>
-        <button id="resetButton">Reset</button>
+        <select id="timerMeetSelect" aria-label="Select meet for timing"></select>
+        <select id="timerRaceSelect" aria-label="Select race to time"></select>
+        <div class="timer-actions" aria-label="Timer actions">
+          <button id="startButton">Start Race</button>
+          <button id="stopButton">Stop</button>
+          <button id="resetButton">Reset</button>
+        </div>
       </div>
 
       <div class="timer-grid">

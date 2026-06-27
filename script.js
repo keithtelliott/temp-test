@@ -4,16 +4,19 @@ let elapsedTime = 0;
 let nextRunnerId = 1;
 let activeRaceId = "1600";
 let activeHeatNumber = 1;
+let activeMeetId = "default-meet";
 const timerHeats = [1, 2];
 const runners = [];
 const runnerStorageKey = "trackLapTimer.runners";
 const raceStorageKey = "trackLapTimer.races";
+const meetStorageKey = "trackLapTimer.meets";
 const defaultRaces = [
   { id: "1600", name: "1600 Meter" },
   { id: "800", name: "800 Meter" },
   { id: "3200", name: "3200 Meter" },
 ];
 let races = loadRaces();
+let meets = loadMeets();
 
 if (races.length === 0) {
   races = defaultRaces.slice();
@@ -23,17 +26,36 @@ if (races.length > 0) {
   activeRaceId = races[0].id;
 }
 
+if (meets.length === 0) {
+  meets = [
+    {
+      id: activeMeetId,
+      name: "Default Meet",
+      assignments: [],
+    },
+  ];
+}
+
+if (!meets.some((meet) => meet.id === activeMeetId)) {
+  activeMeetId = meets[0].id;
+}
+
 const timerDisplay = document.getElementById("timer");
 const startButton = document.getElementById("startButton");
 const stopButton = document.getElementById("stopButton");
 const resetButton = document.getElementById("resetButton");
-const raceSelect = document.getElementById("raceSelect");
+const timerMeetSelect = document.getElementById("timerMeetSelect");
+const timerRaceSelect = document.getElementById("timerRaceSelect");
 const runnerNameInput = document.getElementById("runnerNameInput");
 const addRunnerButton = document.getElementById("addRunnerButton");
 const runnerList = document.getElementById("runnerList");
 const raceNameInput = document.getElementById("raceNameInput");
 const addRaceButton = document.getElementById("addRaceButton");
 const raceList = document.getElementById("raceList");
+const meetNameInput = document.getElementById("meetNameInput");
+const addMeetButton = document.getElementById("addMeetButton");
+const meetList = document.getElementById("meetList");
+const meetSelect = document.getElementById("meetSelect");
 const meetRunnerSelect = document.getElementById("meetRunnerSelect");
 const meetRaceSelect = document.getElementById("meetRaceSelect");
 const meetHeatInput = document.getElementById("meetHeatInput");
@@ -84,8 +106,117 @@ function loadRaces() {
   }
 }
 
+function loadMeets() {
+  const savedMeets = localStorage.getItem(meetStorageKey);
+
+  if (!savedMeets) {
+    return [];
+  }
+
+  try {
+    const parsedMeets = JSON.parse(savedMeets);
+
+    if (!Array.isArray(parsedMeets)) {
+      return [];
+    }
+
+    return parsedMeets
+      .filter((meet) => meet && typeof meet.id === "string" && typeof meet.name === "string")
+      .map((meet) => ({
+        id: meet.id,
+        name: meet.name,
+        assignments: Array.isArray(meet.assignments)
+          ? meet.assignments.filter(
+              (assignment) =>
+                assignment &&
+                Number.isInteger(assignment.runnerId) &&
+                typeof assignment.raceId === "string" &&
+                Number.isInteger(assignment.heatNumber)
+            )
+          : [],
+      }));
+  } catch {
+    localStorage.removeItem(meetStorageKey);
+    return [];
+  }
+}
+
 function saveRaces() {
   localStorage.setItem(raceStorageKey, JSON.stringify(races));
+}
+
+function saveMeets() {
+  localStorage.setItem(meetStorageKey, JSON.stringify(meets));
+}
+
+function getMeetById(meetId) {
+  return meets.find((meet) => meet.id === meetId) || null;
+}
+
+function getActiveMeet() {
+  return getMeetById(activeMeetId) || meets[0] || null;
+}
+
+function getRunnerAssignment(runnerId, meetId = activeMeetId) {
+  const meet = getMeetById(meetId);
+  const assignment = meet ? meet.assignments.find((entry) => entry.runnerId === runnerId) : null;
+
+  if (assignment) {
+    return assignment;
+  }
+
+  const runner = runners.find((entry) => entry.id === runnerId);
+
+  if (runner && runner.raceId !== null && runner.heatNumber !== null) {
+    return {
+      runnerId,
+      raceId: runner.raceId,
+      heatNumber: runner.heatNumber,
+      legacy: true,
+    };
+  }
+
+  return null;
+}
+
+function setRunnerAssignment(runnerId, raceId, heatNumber, meetId = activeMeetId) {
+  const meet = getMeetById(meetId);
+
+  if (!meet) {
+    return;
+  }
+
+  const normalizedHeatNumber = Number.isInteger(heatNumber) && heatNumber > 0 ? heatNumber : 1;
+  const nextAssignment = {
+    runnerId,
+    raceId,
+    heatNumber: normalizedHeatNumber,
+  };
+  const existingIndex = meet.assignments.findIndex((entry) => entry.runnerId === runnerId);
+
+  if (existingIndex === -1) {
+    meet.assignments.push(nextAssignment);
+  } else {
+    meet.assignments[existingIndex] = nextAssignment;
+  }
+
+  saveMeets();
+}
+
+function setActiveMeet(meetId) {
+  const nextMeet = getMeetById(meetId);
+
+  if (!nextMeet) {
+    return;
+  }
+
+  activeMeetId = nextMeet.id;
+  renderMeetOptions();
+  renderMeetList();
+  renderTimerOptions();
+  renderMeetAssignments();
+  renderRunnerButtons();
+  renderResults();
 }
 
 function saveRunners() {
@@ -160,8 +291,10 @@ function parseRaceHeatKey(value) {
 function createRunnerCard(runner) {
   const card = document.createElement("div");
   card.className = "runner-card";
-  const isAssignedToActiveRaceHeat = runner.raceId === activeRaceId && runner.heatNumber === activeHeatNumber;
-  const isUnassigned = runner.raceId === null || runner.heatNumber === null;
+  const assignment = getRunnerAssignment(runner.id);
+  const isAssignedToActiveRaceHeat =
+    assignment !== null && assignment.raceId === activeRaceId && assignment.heatNumber === activeHeatNumber;
+  const isUnassigned = assignment === null;
 
   if (!isAssignedToActiveRaceHeat && !isUnassigned) {
     card.classList.add("inactive");
@@ -181,14 +314,14 @@ function createRunnerCard(runner) {
   lapButton.className = "runner-button lap-button";
   lapButton.type = "button";
   lapButton.textContent = "Lap";
-  lapButton.disabled = runner.finished || startTime === null || (!isAssignedToActiveRaceHeat && !isUnassigned);
+  lapButton.disabled = runner.finished || (!isAssignedToActiveRaceHeat && !isUnassigned);
   lapButton.addEventListener("click", () => recordLap(runner.id));
 
   const finishButton = document.createElement("button");
   finishButton.className = "runner-button finish-button";
   finishButton.type = "button";
   finishButton.textContent = runner.finished ? "Finished" : "Finish";
-  finishButton.disabled = runner.finished || startTime === null || (!isAssignedToActiveRaceHeat && !isUnassigned);
+  finishButton.disabled = runner.finished || (!isAssignedToActiveRaceHeat && !isUnassigned);
   finishButton.addEventListener("click", () => finishRunner(runner.id));
 
   card.appendChild(label);
@@ -219,7 +352,12 @@ function renderRunnerButtons() {
   runnerButtonsContainer.innerHTML = "";
 
   if (runners.length === 0) {
-    runnerButtonsContainer.innerHTML = '<p class="empty-state">Add runners in the Meet tab.</p>';
+    runnerButtonsContainer.innerHTML = '<p class="empty-state">Add runners in the Runners tab.</p>';
+    return;
+  }
+
+  if (!getActiveMeet()) {
+    runnerButtonsContainer.innerHTML = '<p class="empty-state">Add or select a meet in the Timer tab.</p>';
     return;
   }
 
@@ -231,26 +369,64 @@ function renderRunnerButtons() {
 }
 
 function renderTimerOptions() {
-  const previousValue = raceSelect.value;
-  const options = races
-    .flatMap((race) =>
-      timerHeats.map((heatNumber) => {
-        const value = getActiveRaceHeatKey(race.id, heatNumber);
-        return `<option value="${value}">${race.name} Heat ${heatNumber}</option>`;
-      })
-    )
+  const activeMeet = getActiveMeet();
+  const meetOptions = meets
+    .map((meet) => `<option value="${meet.id}">${meet.name}</option>`)
     .join("");
 
-  raceSelect.innerHTML = options;
+  timerMeetSelect.innerHTML = meetOptions || '<option value="">No meets available</option>';
+  timerMeetSelect.disabled = meets.length === 0;
+  timerMeetSelect.value = activeMeet ? activeMeet.id : "";
 
-  const fallbackValue = getActiveRaceHeatKey(races[0].id, timerHeats[0]);
-  const hasPreviousValue = Array.from(raceSelect.options).some((option) => option.value === previousValue);
-  raceSelect.value = hasPreviousValue ? previousValue : fallbackValue;
-  const parsed = parseRaceHeatKey(raceSelect.value);
+  const timerAssignments = activeMeet
+    ? activeMeet.assignments
+        .map((assignment) => {
+          const race = races.find((entry) => entry.id === assignment.raceId);
+          if (!race) {
+            return null;
+          }
+
+          return {
+            value: getActiveRaceHeatKey(race.id, assignment.heatNumber),
+            label: `${race.name} Heat ${assignment.heatNumber}`,
+            raceId: race.id,
+            heatNumber: assignment.heatNumber,
+            raceName: race.name,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  const optionSource = timerAssignments.length > 0
+    ? timerAssignments
+    : races.flatMap((race) =>
+        timerHeats.map((heatNumber) => ({
+          value: getActiveRaceHeatKey(race.id, heatNumber),
+          label: `${race.name} Heat ${heatNumber}`,
+          raceId: race.id,
+          heatNumber,
+          raceName: race.name,
+        }))
+      );
+
+  timerRaceSelect.innerHTML = optionSource.length
+    ? optionSource.map((option) => `<option value="${option.value}">${option.label}</option>`).join("")
+    : '<option value="">No races available</option>';
+
+  timerRaceSelect.disabled = optionSource.length === 0;
+
+  const currentValue = getActiveRaceHeatKey(activeRaceId, activeHeatNumber);
+  const hasCurrentValue = optionSource.some((option) => option.value === currentValue);
+  const fallbackValue = optionSource[0] ? optionSource[0].value : "";
+  timerRaceSelect.value = hasCurrentValue ? currentValue : fallbackValue;
+
+  const parsed = parseRaceHeatKey(timerRaceSelect.value);
   if (parsed) {
     activeRaceId = parsed.raceId;
     activeHeatNumber = parsed.heatNumber;
   }
+
+  startButton.disabled = optionSource.length === 0;
 }
 
 function renderRaceList() {
@@ -269,38 +445,76 @@ function renderRaceList() {
   });
 }
 
+function renderMeetList() {
+  meetList.innerHTML = "";
+
+  if (meets.length === 0) {
+    meetList.innerHTML = '<p class="empty-state">Add a meet to organize assignments by name.</p>';
+    return;
+  }
+
+  meets.forEach((meet) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "runner-list-item meet-list-item";
+    if (meet.id === activeMeetId) {
+      item.classList.add("active");
+    }
+
+    const assignmentCount = meet.assignments.length;
+    item.innerHTML = `
+      <span>${meet.name}</span>
+      <small>${assignmentCount} assignment${assignmentCount === 1 ? "" : "s"}</small>
+    `;
+
+    item.addEventListener("click", () => setActiveMeet(meet.id));
+    meetList.appendChild(item);
+  });
+}
+
 function renderMeetOptions() {
+  const activeMeet = getActiveMeet();
+
+  meetSelect.innerHTML = meets.length
+    ? meets.map((meet) => `<option value="${meet.id}">${meet.name}</option>`).join("")
+    : '<option value="">No meets available</option>';
+  meetSelect.disabled = meets.length === 0;
+  meetSelect.value = activeMeet ? activeMeet.id : "";
+
   meetRunnerSelect.innerHTML = runners.length
     ? runners.map((runner) => `<option value="${runner.id}">${runner.name}</option>`).join("")
     : '<option value="">No runners available</option>';
 
   meetRunnerSelect.disabled = runners.length === 0;
-  assignRunnerButton.disabled = runners.length === 0 || races.length === 0;
+  assignRunnerButton.disabled = runners.length === 0 || races.length === 0 || meets.length === 0;
 
   meetRaceSelect.innerHTML = races.length
     ? races.map((race) => `<option value="${race.id}">${race.name}</option>`).join("")
     : '<option value="">No races available</option>';
 
   meetRaceSelect.disabled = races.length === 0;
-  meetHeatInput.disabled = races.length === 0;
+  meetHeatInput.disabled = races.length === 0 || meets.length === 0;
 }
 
 function renderMeetAssignments() {
   meetAssignments.innerHTML = "";
 
-  const assignedRunners = runners.filter((runner) => runner.raceId);
+  const activeMeet = getActiveMeet();
+  const assignedRunners = runners
+    .map((runner) => ({ runner, assignment: getRunnerAssignment(runner.id) }))
+    .filter(({ assignment }) => assignment !== null);
 
   if (assignedRunners.length === 0) {
-    meetAssignments.innerHTML = '<p class="empty-state">Assign runners to a race and heat here.</p>';
+    meetAssignments.innerHTML = '<p class="empty-state">Assign runners to a race and heat in the active meet.</p>';
     return;
   }
 
   const groupedAssignments = new Map();
 
-  assignedRunners.forEach((runner) => {
-    const race = races.find((entry) => entry.id === runner.raceId);
+  assignedRunners.forEach(({ runner, assignment }) => {
+    const race = races.find((entry) => entry.id === assignment.raceId);
     const raceName = race ? race.name : "Unknown Race";
-    const heatNumber = runner.heatNumber ?? 1;
+    const heatNumber = assignment.heatNumber ?? 1;
     const key = `${raceName}::${heatNumber}`;
 
     if (!groupedAssignments.has(key)) {
@@ -325,19 +539,32 @@ function renderMeetAssignments() {
     card.appendChild(count);
     meetAssignments.appendChild(card);
   });
+
+  if (activeMeet) {
+    const heading = document.createElement("p");
+    heading.className = "section-copy active-meet-note";
+    heading.textContent = `Active meet: ${activeMeet.name}`;
+    meetAssignments.prepend(heading);
+  }
 }
 
 function renderResults() {
   resultsBody.innerHTML = "";
 
   runners.forEach((runner) => {
+    const assignment = getRunnerAssignment(runner.id);
+
+    if (!assignment) {
+      return;
+    }
+
     runner.laps.forEach((lap) => {
       const row = document.createElement("tr");
-      const race = races.find((entry) => entry.id === runner.raceId);
+      const race = races.find((entry) => entry.id === assignment.raceId);
       row.innerHTML = `
         <td>${runner.name}</td>
         <td>${race ? race.name : "Unassigned"}</td>
-        <td>${runner.heatNumber ?? "Unassigned"}</td>
+        <td>${assignment.heatNumber ?? "Unassigned"}</td>
         <td>${lap.number}</td>
         <td>${formatTime(lap.lapTime)}</td>
         <td>${formatTime(lap.totalTime)}</td>
@@ -353,9 +580,15 @@ function renderResults() {
 function renderTimerChart() {
   if (!timerChart) return;
 
-  const chartRunners = runners.filter(
-    (r) => r.raceId === activeRaceId && r.heatNumber === activeHeatNumber && r.laps.length > 0
-  );
+  const chartRunners = runners.filter((runner) => {
+    const assignment = getRunnerAssignment(runner.id);
+    return (
+      assignment !== null &&
+      assignment.raceId === activeRaceId &&
+      assignment.heatNumber === activeHeatNumber &&
+      runner.laps.length > 0
+    );
+  });
 
   if (chartRunners.length === 0) {
     timerChart.innerHTML = '<p class="summary-empty">No lap data for this heat yet.</p>';
@@ -414,7 +647,7 @@ function setActiveTab(tabName) {
 }
 
 function renderSummary() {
-  const chartRunners = runners.filter((runner) => runner.laps.length > 0);
+  const chartRunners = runners.filter((runner) => runner.laps.length > 0 && getRunnerAssignment(runner.id) !== null);
 
   if (chartRunners.length === 0) {
     summaryStats.innerHTML = '<p class="summary-empty">No lap data yet.</p>';
@@ -435,6 +668,7 @@ function renderSummary() {
     : null;
 
   summaryStats.innerHTML = `
+    <div class="summary-item"><strong>Meet:</strong> ${getActiveMeet() ? getActiveMeet().name : "Unassigned"}</div>
     <div class="summary-item"><strong>Runners with Laps:</strong> ${chartRunners.length}</div>
     <div class="summary-item"><strong>Total Laps:</strong> ${totalLapCount}</div>
     <div class="summary-item"><strong>Fastest Lap:</strong> ${formatTime(fastestLap)}</div>
@@ -480,6 +714,28 @@ function renderSummary() {
   `;
 }
 
+function addMeet(name) {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    meetNameInput.focus();
+    return;
+  }
+
+  const meetId = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  if (meets.some((meet) => meet.id === meetId)) {
+    meetNameInput.focus();
+    return;
+  }
+
+  meets.push({ id: meetId, name: trimmedName, assignments: [] });
+  saveMeets();
+  meetNameInput.value = "";
+  setActiveMeet(meetId);
+  renderMeetList();
+}
+
 function addRunner(name) {
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -517,13 +773,15 @@ function recordLap(runnerId) {
     return;
   }
 
-  if (runner.raceId === null || runner.heatNumber === null) {
-    runner.raceId = activeRaceId;
-    runner.heatNumber = activeHeatNumber;
-    saveRunners();
+  const assignment = getRunnerAssignment(runner.id);
+
+  if (assignment === null) {
+    setRunnerAssignment(runner.id, activeRaceId, activeHeatNumber);
   }
 
-  if (runner.raceId !== activeRaceId || runner.heatNumber !== activeHeatNumber) {
+  const activeAssignment = getRunnerAssignment(runner.id);
+
+  if (!activeAssignment || activeAssignment.raceId !== activeRaceId || activeAssignment.heatNumber !== activeHeatNumber) {
     return;
   }
 
@@ -551,13 +809,15 @@ function finishRunner(runnerId) {
     return;
   }
 
-  if (runner.raceId === null || runner.heatNumber === null) {
-    runner.raceId = activeRaceId;
-    runner.heatNumber = activeHeatNumber;
-    saveRunners();
+  const assignment = getRunnerAssignment(runner.id);
+
+  if (assignment === null) {
+    setRunnerAssignment(runner.id, activeRaceId, activeHeatNumber);
   }
 
-  if (runner.raceId !== activeRaceId || runner.heatNumber !== activeHeatNumber) {
+  const activeAssignment = getRunnerAssignment(runner.id);
+
+  if (!activeAssignment || activeAssignment.raceId !== activeRaceId || activeAssignment.heatNumber !== activeHeatNumber) {
     return;
   }
 
@@ -577,9 +837,18 @@ function finishRunner(runnerId) {
   runner.finished = true;
   runner.finishTime = elapsedTime;
 
-  // Check if all runners are finished
-  const allFinished = runners.every((r) => r.finished);
-  if (allFinished) {
+  const activeHeatHasRemainingRunners = runners.some((entry) => {
+    const entryAssignment = getRunnerAssignment(entry.id);
+
+    return (
+      entryAssignment !== null &&
+      entryAssignment.raceId === activeRaceId &&
+      entryAssignment.heatNumber === activeHeatNumber &&
+      !entry.finished
+    );
+  });
+
+  if (!activeHeatHasRemainingRunners) {
     clearInterval(timerInterval);
     timerInterval = null;
   }
@@ -589,7 +858,7 @@ function finishRunner(runnerId) {
 }
 
 startButton.addEventListener("click", function () {
-  const selectedRaceHeat = parseRaceHeatKey(raceSelect.value);
+  const selectedRaceHeat = parseRaceHeatKey(timerRaceSelect.value);
 
   if (selectedRaceHeat) {
     activeRaceId = selectedRaceHeat.raceId;
@@ -631,6 +900,10 @@ addRunnerButton.addEventListener("click", function () {
   addRunner(runnerNameInput.value);
 });
 
+addMeetButton.addEventListener("click", function () {
+  addMeet(meetNameInput.value);
+});
+
 addRaceButton.addEventListener("click", function () {
   const trimmedName = raceNameInput.value.trim();
 
@@ -655,20 +928,32 @@ addRaceButton.addEventListener("click", function () {
   renderMeetOptions();
 });
 
+timerMeetSelect.addEventListener("change", function () {
+  setActiveMeet(timerMeetSelect.value);
+});
+
+timerRaceSelect.addEventListener("change", function () {
+  const selectedRaceHeat = parseRaceHeatKey(timerRaceSelect.value);
+
+  if (selectedRaceHeat) {
+    activeRaceId = selectedRaceHeat.raceId;
+    activeHeatNumber = selectedRaceHeat.heatNumber;
+  }
+
+  renderRunnerButtons();
+});
+
 assignRunnerButton.addEventListener("click", function () {
   const runnerId = Number.parseInt(meetRunnerSelect.value, 10);
   const selectedRaceId = meetRaceSelect.value;
   const selectedHeatNumber = Number.parseInt(meetHeatInput.value, 10) || 1;
   const runner = runners.find((entry) => entry.id === runnerId);
 
-  if (!runner || !races.some((race) => race.id === selectedRaceId)) {
+  if (!runner || !races.some((race) => race.id === selectedRaceId) || !getActiveMeet()) {
     return;
   }
 
-  runner.raceId = selectedRaceId;
-  runner.heatNumber = selectedHeatNumber;
-  saveRunners();
-  renderRunnerList();
+  setRunnerAssignment(runner.id, selectedRaceId, selectedHeatNumber);
   renderRunnerButtons();
   renderMeetOptions();
   renderMeetAssignments();
@@ -681,9 +966,19 @@ tabButtons.forEach((button) => {
   });
 });
 
+meetSelect.addEventListener("change", function () {
+  setActiveMeet(meetSelect.value);
+});
+
 runnerNameInput.addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
     addRunner(runnerNameInput.value);
+  }
+});
+
+meetNameInput.addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    addMeet(meetNameInput.value);
   }
 });
 
@@ -701,21 +996,11 @@ function renderRaceOptions() {
   meetRaceSelect.innerHTML = options;
 }
 
-raceSelect.addEventListener("change", function () {
-  const selectedRaceHeat = parseRaceHeatKey(raceSelect.value);
-
-  if (selectedRaceHeat) {
-    activeRaceId = selectedRaceHeat.raceId;
-    activeHeatNumber = selectedRaceHeat.heatNumber;
-  }
-
-  renderRunnerButtons();
-});
-
 loadRunners();
 renderRaceOptions();
 renderTimerOptions();
 renderRaceList();
+renderMeetList();
 renderRunnerList();
 renderMeetOptions();
 renderMeetAssignments();

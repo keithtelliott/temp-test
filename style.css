@@ -16,7 +16,7 @@ h1, h2 {
 
 .tab-bar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin: 20px 0 24px;
 }
@@ -56,15 +56,23 @@ h1, h2 {
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
+  align-items: center;
   margin-bottom: 30px;
 }
 
 .controls select {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid #ccc;
   background: white;
-  min-width: 170px;
+  min-width: 160px;
+}
+
+.timer-actions {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 8px;
+  align-items: center;
 }
 
 button,
@@ -93,7 +101,23 @@ button {
   color: white;
 }
 
+.timer-actions button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
 .runner-management {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.meet-management {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
@@ -103,16 +127,31 @@ button {
 
 .runner-assignment {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr auto auto;
   gap: 10px;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.section-copy {
+  margin: -8px 0 18px;
+  text-align: center;
+  color: #5b6472;
 }
 
 #runnerNameInput {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #ccc;
+  width: 100%;
+}
+
+#meetNameInput,
+#meetSelect {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: white;
   width: 100%;
 }
 
@@ -164,6 +203,33 @@ button {
   gap: 10px;
 }
 
+.meet-list {
+  display: grid;
+  gap: 10px;
+}
+
+.meet-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.meet-list-item.active {
+  border-color: #1f4b99;
+  box-shadow: 0 0 0 2px rgba(31, 75, 153, 0.12);
+}
+
+.meet-list-item small {
+  color: #5b6472;
+  font-weight: 600;
+}
+
 .race-list-item {
   font-weight: 700;
 }
@@ -189,6 +255,11 @@ button {
 .race-summary {
   display: grid;
   gap: 12px;
+}
+
+.active-meet-note {
+  text-align: left;
+  margin-bottom: 12px;
 }
 
 .race-summary-card {
@@ -226,8 +297,8 @@ button {
 .runner-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px 12px;
   background: white;
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -236,7 +307,7 @@ button {
 
 .runner-card-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .runner-card.finished {
@@ -250,7 +321,7 @@ button {
 
 .runner-label {
   font-weight: bold;
-  font-size: 16px;
+  font-size: 15px;
   color: #333;
   text-align: center;
   padding: 4px 0;
@@ -266,15 +337,15 @@ button {
 
 .runner-button {
   color: white;
-  font-size: 14px;
-  padding: 12px 16px;
-  border-radius: 10px;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 9px;
   border: none;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s ease;
   flex: 1;
-  min-height: 44px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,6 +372,45 @@ button {
   background: #ccc;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.timer-grid .runner-card-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer-grid .runner-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.timer-grid .runner-card {
+  width: fit-content;
+  align-self: center;
+  margin: 0 auto;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.timer-grid .runner-button {
+  flex: 0 0 auto !important;
+  display: inline-flex;
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: fit-content;
+  min-height: 30px;
+  padding: 6px 8px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .summary-container {
@@ -338,14 +448,13 @@ button {
 }
 
 .timer-grid {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
+  display: grid;
+  gap: 14px;
+  align-items: start;
 }
 
 .timer-chart {
-  min-width: 300px;
-  max-width: 360px;
+  width: 100%;
   background: white;
   border-radius: 12px;
   padding: 12px;
@@ -354,11 +463,11 @@ button {
 
 .timer-chart .chart-wrapper {
   grid-template-columns: 48px 1fr;
-  min-height: 160px;
+  min-height: 150px;
 }
 
 .timer-chart .chart-grid {
-  height: 140px;
+  height: 130px;
 }
 
 .chart-wrapper {
@@ -413,7 +522,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 
@@ -422,9 +531,9 @@ button {
   flex-direction: row;
   align-items: flex-end;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  height: 220px;
+  height: 130px;
   border-left: 1px solid #ddd;
   padding-left: 8px;
 }
@@ -433,14 +542,14 @@ button {
   position: relative;
   background: #1565c0;
   border-radius: 10px 10px 0 0;
-  width: 32px;
+  width: 26px;
   min-height: 12px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 6px;
+  padding-bottom: 5px;
   color: white;
-  font-size: 12px;
+  font-size: 11px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
@@ -450,19 +559,19 @@ button {
 
 .lap-number {
   position: absolute;
-  left: 8px;
+  left: 6px;
   top: 6px;
   font-weight: 700;
 }
 
 .lap-value {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .runner-name {
   text-align: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   color: #333;
 }
 
@@ -477,6 +586,10 @@ button {
 
   .chart-grid {
     gap: 10px;
+  }
+
+  .timer-grid {
+    gap: 12px;
   }
 }
 
@@ -500,12 +613,25 @@ th {
 
 @media (max-width: 640px) {
   .controls,
-  .runner-management {
+  .runner-management,
+  .meet-management,
+  .runner-assignment {
     grid-template-columns: 1fr;
   }
 
+  .timer-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .timer-chart {
+    padding: 10px;
+  }
+
   .runner-button {
-    font-size: 16px;
-    padding: 16px;
+    font-size: 12px;
+    padding: 9px 10px;
+    min-height: 36px;
   }
 }
