@@ -31,6 +31,7 @@ if (meets.length === 0) {
     {
       id: activeMeetId,
       name: "Default Meet",
+      roster: [],
       assignments: [],
     },
   ];
@@ -57,6 +58,9 @@ const addMeetButton = document.getElementById("addMeetButton");
 const meetList = document.getElementById("meetList");
 const meetSelect = document.getElementById("meetSelect");
 const meetRunnerSelect = document.getElementById("meetRunnerSelect");
+const addRunnerToMeetButton = document.getElementById("addRunnerToMeetButton");
+const meetRosterList = document.getElementById("meetRosterList");
+const meetAssignmentRunnerSelect = document.getElementById("meetAssignmentRunnerSelect");
 const meetRaceSelect = document.getElementById("meetRaceSelect");
 const meetHeatInput = document.getElementById("meetHeatInput");
 const assignRunnerButton = document.getElementById("assignRunnerButton");
@@ -122,10 +126,8 @@ function loadMeets() {
 
     return parsedMeets
       .filter((meet) => meet && typeof meet.id === "string" && typeof meet.name === "string")
-      .map((meet) => ({
-        id: meet.id,
-        name: meet.name,
-        assignments: Array.isArray(meet.assignments)
+      .map((meet) => {
+        const assignments = Array.isArray(meet.assignments)
           ? meet.assignments.filter(
               (assignment) =>
                 assignment &&
@@ -133,8 +135,19 @@ function loadMeets() {
                 typeof assignment.raceId === "string" &&
                 Number.isInteger(assignment.heatNumber)
             )
-          : [],
-      }));
+          : [];
+        const roster = Array.isArray(meet.roster)
+          ? meet.roster.filter((runnerId) => Number.isInteger(runnerId))
+          : [];
+        const assignmentRoster = assignments.map((assignment) => assignment.runnerId).filter((runnerId) => Number.isInteger(runnerId));
+
+        return {
+          id: meet.id,
+          name: meet.name,
+          roster: [...new Set([...roster, ...assignmentRoster])],
+          assignments,
+        };
+      });
   } catch {
     localStorage.removeItem(meetStorageKey);
     return [];
@@ -155,6 +168,40 @@ function getMeetById(meetId) {
 
 function getActiveMeet() {
   return getMeetById(activeMeetId) || meets[0] || null;
+}
+
+function getMeetRoster(meetId = activeMeetId) {
+  const meet = getMeetById(meetId);
+
+  if (!meet) {
+    return [];
+  }
+
+  return meet.roster
+    .map((runnerId) => runners.find((runner) => runner.id === runnerId))
+    .filter(Boolean);
+}
+
+function isRunnerInMeet(runnerId, meetId = activeMeetId) {
+  const meet = getMeetById(meetId);
+
+  return meet ? meet.roster.includes(runnerId) : false;
+}
+
+function addRunnerToMeet(runnerId, meetId = activeMeetId) {
+  const meet = getMeetById(meetId);
+
+  if (!meet || !Number.isInteger(runnerId)) {
+    return false;
+  }
+
+  if (!meet.roster.includes(runnerId)) {
+    meet.roster.push(runnerId);
+    saveMeets();
+    return true;
+  }
+
+  return false;
 }
 
 function getRunnerAssignment(runnerId, meetId = activeMeetId) {
@@ -186,6 +233,8 @@ function setRunnerAssignment(runnerId, raceId, heatNumber, meetId = activeMeetId
     return;
   }
 
+  addRunnerToMeet(runnerId, meetId);
+
   const normalizedHeatNumber = Number.isInteger(heatNumber) && heatNumber > 0 ? heatNumber : 1;
   const nextAssignment = {
     runnerId,
@@ -213,6 +262,7 @@ function setActiveMeet(meetId) {
   activeMeetId = nextMeet.id;
   renderMeetOptions();
   renderMeetList();
+  renderMeetRoster();
   renderTimerOptions();
   renderMeetAssignments();
   renderRunnerButtons();
@@ -361,7 +411,23 @@ function renderRunnerButtons() {
     return;
   }
 
-  runners.forEach((runner) => {
+  const runnersForActiveHeat = runners.filter((runner) => {
+    const assignment = getRunnerAssignment(runner.id);
+
+    return (
+      assignment !== null &&
+      assignment.raceId === activeRaceId &&
+      assignment.heatNumber === activeHeatNumber
+    );
+  });
+
+  if (runnersForActiveHeat.length === 0) {
+    runnerButtonsContainer.innerHTML = '<p class="empty-state">No runners are assigned to this meet and race heat yet.</p>';
+    renderTimerChart();
+    return;
+  }
+
+  runnersForActiveHeat.forEach((runner) => {
     runnerButtonsContainer.appendChild(createRunnerCard(runner));
   });
 
@@ -379,22 +445,31 @@ function renderTimerOptions() {
   timerMeetSelect.value = activeMeet ? activeMeet.id : "";
 
   const timerAssignments = activeMeet
-    ? activeMeet.assignments
-        .map((assignment) => {
-          const race = races.find((entry) => entry.id === assignment.raceId);
-          if (!race) {
-            return null;
-          }
+    ? Array.from(
+        new Map(
+          activeMeet.assignments
+            .map((assignment) => {
+              const race = races.find((entry) => entry.id === assignment.raceId);
+              if (!race) {
+                return null;
+              }
 
-          return {
-            value: getActiveRaceHeatKey(race.id, assignment.heatNumber),
-            label: `${race.name} Heat ${assignment.heatNumber}`,
-            raceId: race.id,
-            heatNumber: assignment.heatNumber,
-            raceName: race.name,
-          };
-        })
-        .filter(Boolean)
+              const value = getActiveRaceHeatKey(race.id, assignment.heatNumber);
+
+              return [
+                value,
+                {
+                  value,
+                  label: `${race.name} Heat ${assignment.heatNumber}`,
+                  raceId: race.id,
+                  heatNumber: assignment.heatNumber,
+                  raceName: race.name,
+                },
+              ];
+            })
+            .filter(Boolean)
+        ).values()
+      )
     : [];
 
   const optionSource = timerAssignments.length > 0
@@ -461,10 +536,11 @@ function renderMeetList() {
       item.classList.add("active");
     }
 
+    const rosterCount = Array.isArray(meet.roster) ? meet.roster.length : 0;
     const assignmentCount = meet.assignments.length;
     item.innerHTML = `
       <span>${meet.name}</span>
-      <small>${assignmentCount} assignment${assignmentCount === 1 ? "" : "s"}</small>
+      <small>${rosterCount} rostered, ${assignmentCount} placement${assignmentCount === 1 ? "" : "s"}</small>
     `;
 
     item.addEventListener("click", () => setActiveMeet(meet.id));
@@ -486,7 +562,15 @@ function renderMeetOptions() {
     : '<option value="">No runners available</option>';
 
   meetRunnerSelect.disabled = runners.length === 0;
-  assignRunnerButton.disabled = runners.length === 0 || races.length === 0 || meets.length === 0;
+  addRunnerToMeetButton.disabled = runners.length === 0 || meets.length === 0;
+
+  const rosteredRunners = activeMeet ? getMeetRoster(activeMeet.id) : [];
+  meetAssignmentRunnerSelect.innerHTML = rosteredRunners.length
+    ? rosteredRunners.map((runner) => `<option value="${runner.id}">${runner.name}</option>`).join("")
+    : '<option value="">No rostered runners</option>';
+
+  meetAssignmentRunnerSelect.disabled = rosteredRunners.length === 0;
+  assignRunnerButton.disabled = rosteredRunners.length === 0 || races.length === 0 || meets.length === 0;
 
   meetRaceSelect.innerHTML = races.length
     ? races.map((race) => `<option value="${race.id}">${race.name}</option>`).join("")
@@ -494,6 +578,25 @@ function renderMeetOptions() {
 
   meetRaceSelect.disabled = races.length === 0;
   meetHeatInput.disabled = races.length === 0 || meets.length === 0;
+}
+
+function renderMeetRoster() {
+  meetRosterList.innerHTML = "";
+
+  const activeMeet = getActiveMeet();
+  const rosteredRunners = activeMeet ? getMeetRoster(activeMeet.id) : [];
+
+  if (rosteredRunners.length === 0) {
+    meetRosterList.innerHTML = '<p class="empty-state meet-roster-empty">Add runners to this meet to build the roster.</p>';
+    return;
+  }
+
+  rosteredRunners.forEach((runner) => {
+    const chip = document.createElement("div");
+    chip.className = "meet-roster-item";
+    chip.textContent = runner.name;
+    meetRosterList.appendChild(chip);
+  });
 }
 
 function renderMeetAssignments() {
@@ -729,7 +832,7 @@ function addMeet(name) {
     return;
   }
 
-  meets.push({ id: meetId, name: trimmedName, assignments: [] });
+  meets.push({ id: meetId, name: trimmedName, roster: [], assignments: [] });
   saveMeets();
   meetNameInput.value = "";
   setActiveMeet(meetId);
@@ -943,19 +1046,33 @@ timerRaceSelect.addEventListener("change", function () {
   renderRunnerButtons();
 });
 
-assignRunnerButton.addEventListener("click", function () {
+addRunnerToMeetButton.addEventListener("click", function () {
   const runnerId = Number.parseInt(meetRunnerSelect.value, 10);
+
+  if (!Number.isInteger(runnerId) || !getActiveMeet()) {
+    return;
+  }
+
+  addRunnerToMeet(runnerId);
+  renderMeetOptions();
+  renderMeetRoster();
+  renderMeetList();
+});
+
+assignRunnerButton.addEventListener("click", function () {
+  const runnerId = Number.parseInt(meetAssignmentRunnerSelect.value, 10);
   const selectedRaceId = meetRaceSelect.value;
   const selectedHeatNumber = Number.parseInt(meetHeatInput.value, 10) || 1;
   const runner = runners.find((entry) => entry.id === runnerId);
 
-  if (!runner || !races.some((race) => race.id === selectedRaceId) || !getActiveMeet()) {
+  if (!runner || !races.some((race) => race.id === selectedRaceId) || !getActiveMeet() || !isRunnerInMeet(runner.id)) {
     return;
   }
 
   setRunnerAssignment(runner.id, selectedRaceId, selectedHeatNumber);
   renderRunnerButtons();
   renderMeetOptions();
+  renderMeetRoster();
   renderMeetAssignments();
   renderResults();
 });
@@ -1003,6 +1120,7 @@ renderRaceList();
 renderMeetList();
 renderRunnerList();
 renderMeetOptions();
+renderMeetRoster();
 renderMeetAssignments();
 setActiveTab(activeTab);
 renderRunnerButtons();

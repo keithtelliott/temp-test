@@ -56,17 +56,57 @@
 
     <section id="tab-meet-setup" class="tab-panel" aria-labelledby="Meet Setup">
       <h2>Meet Setup</h2>
-      <p class="section-copy">Choose a meet, then coordinate runners by race and heat.</p>
+      <p class="section-copy">Work through the meet in order: choose the meet, build the roster, then place runners into races and heats.</p>
 
-      <section class="runner-assignment">
-        <select id="meetSelect" aria-label="Select meet to set up"></select>
-        <select id="meetRunnerSelect" aria-label="Select runner to assign"></select>
-        <select id="meetRaceSelect" aria-label="Select race to assign"></select>
-        <input id="meetHeatInput" type="number" min="1" value="1" aria-label="Enter heat number" />
-        <button id="assignRunnerButton">Assign to Meet</button>
+      <section class="meet-setup-steps" aria-label="Meet setup workflow">
+        <article class="setup-step setup-step-primary">
+          <div class="setup-step-header">
+            <span class="setup-step-number">1</span>
+            <div>
+              <h3>Choose a meet</h3>
+              <p>Set the active meet before making any assignments.</p>
+            </div>
+          </div>
+
+          <select id="meetSelect" aria-label="Select meet to set up"></select>
+        </article>
+
+        <article class="setup-step">
+          <div class="setup-step-header">
+            <span class="setup-step-number">2</span>
+            <div>
+              <h3>Build the roster</h3>
+              <p>Add runners to the active meet before assigning race and heat details.</p>
+            </div>
+          </div>
+
+          <section class="runner-assignment roster-assignment" aria-label="Runner roster controls">
+            <select id="meetRunnerSelect" aria-label="Select runner to add to meet"></select>
+            <button id="addRunnerToMeetButton">Add to Meet</button>
+          </section>
+
+          <div id="meetRosterList" class="meet-roster"></div>
+        </article>
+
+        <article class="setup-step setup-step-summary">
+          <div class="setup-step-header">
+            <span class="setup-step-number">3</span>
+            <div>
+              <h3>Place runners into races</h3>
+              <p>Choose a rostered runner, then set the race and heat for that meet.</p>
+            </div>
+          </div>
+
+          <section class="runner-assignment" aria-label="Race assignment controls">
+            <select id="meetAssignmentRunnerSelect" aria-label="Select rostered runner to place"></select>
+            <select id="meetRaceSelect" aria-label="Select race to assign"></select>
+            <input id="meetHeatInput" type="number" min="1" value="1" aria-label="Enter heat number" />
+            <button id="assignRunnerButton">Assign to Race</button>
+          </section>
+
+          <div id="meetAssignments" class="meet-summary"></div>
+        </article>
       </section>
-
-      <div id="meetAssignments" class="meet-summary"></div>
     </section>
 
     <section id="tab-results" class="tab-panel" aria-labelledby="Results">

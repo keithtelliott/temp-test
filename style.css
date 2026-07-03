@@ -133,10 +133,89 @@ button {
   margin-bottom: 20px;
 }
 
+.roster-assignment {
+  grid-template-columns: 1fr auto;
+  margin-bottom: 16px;
+}
+
+.meet-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.meet-roster-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #edf2fb;
+  color: #23407c;
+  font-weight: 700;
+}
+
+.meet-roster-empty {
+  margin-top: 4px;
+}
+
 .section-copy {
   margin: -8px 0 18px;
   text-align: center;
   color: #5b6472;
+}
+
+.meet-setup-steps {
+  display: grid;
+  gap: 14px;
+}
+
+.setup-step {
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.setup-step-primary {
+  border: 1px solid rgba(31, 75, 153, 0.12);
+}
+
+.setup-step-summary {
+  padding-bottom: 12px;
+}
+
+.setup-step-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.setup-step-header h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: #1f2630;
+}
+
+.setup-step-header p {
+  margin: 0;
+  color: #5b6472;
+  line-height: 1.45;
+}
+
+.setup-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #1f4b99;
+  color: white;
+  font-weight: 800;
+  flex: 0 0 auto;
 }
 
 #runnerNameInput {
