@@ -74,6 +74,8 @@ const summaryChart = document.getElementById("summaryChart");
 const resultsMeetFilter = document.getElementById("resultsMeetFilter");
 const resultsRaceFilter = document.getElementById("resultsRaceFilter");
 const resultsHeatFilter = document.getElementById("resultsHeatFilter");
+const resultsSessionFilter = document.getElementById("resultsSessionFilter");
+const resultsActionMessage = document.getElementById("resultsActionMessage");
 const resultsContext = document.getElementById("resultsContext");
 const groupedResults = document.getElementById("groupedResults");
 const exportResultsButton = document.getElementById("exportResultsButton");
@@ -83,9 +85,13 @@ const tabPanels = document.querySelectorAll(".tab-panel");
 let activeTab = "runners";
 const ALL_RACES_OPTION = "__all_races__";
 const ALL_HEATS_OPTION = "__all_heats__";
+const ALL_SESSIONS_OPTION = "__all_sessions__";
+const LATEST_SESSION_OPTION = "__latest_session__";
 let resultsMeetFilterValue = activeMeetId;
 let resultsRaceFilterValue = ALL_RACES_OPTION;
 let resultsHeatFilterValue = ALL_HEATS_OPTION;
+let resultsSessionFilterValue = LATEST_SESSION_OPTION;
+let currentResultSessionId = null;
 
 function formatTime(milliseconds) {
   const totalSeconds = milliseconds / 1000;
@@ -100,6 +106,38 @@ function formatTime(milliseconds) {
     "." +
     String(hundredths).padStart(2, "0")
   );
+}
+
+function createResultSessionId() {
+  return `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getScopedResultsWithoutSessionFilter() {
+  return results.filter((entry) => {
+    const matchesMeet = !resultsMeetFilterValue || entry.meetId === resultsMeetFilterValue;
+    const matchesRace = resultsRaceFilterValue === ALL_RACES_OPTION || entry.raceId === resultsRaceFilterValue;
+    const matchesHeat =
+      resultsHeatFilterValue === ALL_HEATS_OPTION || entry.heatNumber === Number.parseInt(resultsHeatFilterValue, 10);
+    return matchesMeet && matchesRace && matchesHeat;
+  });
+}
+
+function getLatestSessionIdForScope() {
+  const scopedResults = getScopedResultsWithoutSessionFilter();
+
+  if (scopedResults.length === 0) {
+    return null;
+  }
+
+  const latestEntry = scopedResults.reduce((latest, entry) => {
+    if (!latest) {
+      return entry;
+    }
+
+    return new Date(entry.recordedAt).getTime() > new Date(latest.recordedAt).getTime() ? entry : latest;
+  }, null);
+
+  return latestEntry ? latestEntry.sessionId : null;
 }
 
 function loadRaces() {
@@ -201,6 +239,10 @@ function loadResults() {
         meetId: entry.meetId,
         raceId: entry.raceId,
         heatNumber: entry.heatNumber,
+        sessionId:
+          typeof entry.sessionId === "string" && entry.sessionId
+            ? entry.sessionId
+            : `legacy-${entry.meetId}-${entry.raceId}-${entry.heatNumber}`,
         runnerId: entry.runnerId,
         runnerName: entry.runnerName,
         lapNumber: entry.lapNumber,
@@ -241,6 +283,7 @@ function appendResultRecord({
   meetId,
   raceId,
   heatNumber,
+  sessionId,
   runnerId,
   runnerName,
   lapNumber,
@@ -252,6 +295,7 @@ function appendResultRecord({
     typeof meetId !== "string" ||
     typeof raceId !== "string" ||
     !Number.isInteger(heatNumber) ||
+    typeof sessionId !== "string" ||
     !Number.isInteger(runnerId) ||
     typeof runnerName !== "string" ||
     !Number.isInteger(lapNumber) ||
@@ -267,6 +311,7 @@ function appendResultRecord({
     meetId,
     raceId,
     heatNumber,
+    sessionId,
     runnerId,
     runnerName,
     lapNumber,
@@ -279,16 +324,19 @@ function appendResultRecord({
 }
 
 function getResultsInScope() {
-  const meetId = resultsMeetFilterValue;
-  const raceId = resultsRaceFilterValue;
-  const heatValue = resultsHeatFilterValue;
+  const latestSessionId = getLatestSessionIdForScope();
 
-  return results
+  return getScopedResultsWithoutSessionFilter()
     .filter((entry) => {
-      const matchesMeet = !meetId || entry.meetId === meetId;
-      const matchesRace = raceId === ALL_RACES_OPTION || entry.raceId === raceId;
-      const matchesHeat = heatValue === ALL_HEATS_OPTION || entry.heatNumber === Number.parseInt(heatValue, 10);
-      return matchesMeet && matchesRace && matchesHeat;
+      if (resultsSessionFilterValue === ALL_SESSIONS_OPTION) {
+        return true;
+      }
+
+      if (resultsSessionFilterValue === LATEST_SESSION_OPTION) {
+        return latestSessionId !== null && entry.sessionId === latestSessionId;
+      }
+
+      return entry.sessionId === resultsSessionFilterValue;
     })
     .sort((a, b) => {
       if (a.raceId !== b.raceId) {
@@ -408,6 +456,7 @@ function setActiveMeet(meetId) {
   resultsMeetFilterValue = nextMeet.id;
   resultsRaceFilterValue = ALL_RACES_OPTION;
   resultsHeatFilterValue = ALL_HEATS_OPTION;
+  resultsSessionFilterValue = LATEST_SESSION_OPTION;
   renderMeetOptions();
   renderMeetList();
   renderMeetRoster();
@@ -823,11 +872,11 @@ function renderResultsFilters() {
     scopedRaceIds.add(race.id);
   });
 
+  const sortedRaceIds = Array.from(scopedRaceIds).sort((a, b) => getRaceNameById(a).localeCompare(getRaceNameById(b)));
+
   const raceOptions = [
     `<option value="${ALL_RACES_OPTION}">All Races</option>`,
-    ...Array.from(scopedRaceIds)
-      .map((raceId) => `<option value="${raceId}">${getRaceNameById(raceId)}</option>`)
-      .sort((a, b) => a.localeCompare(b)),
+    ...sortedRaceIds.map((raceId) => `<option value="${raceId}">${getRaceNameById(raceId)}</option>`),
   ];
 
   resultsRaceFilter.innerHTML = raceOptions.join("");
@@ -858,6 +907,36 @@ function renderResultsFilters() {
     resultsHeatFilterValue = ALL_HEATS_OPTION;
   }
   resultsHeatFilter.value = resultsHeatFilterValue;
+
+  const scopedResults = getScopedResultsWithoutSessionFilter();
+  const scopedSessionIds = Array.from(new Set(scopedResults.map((entry) => entry.sessionId)));
+  const sortedSessionIds = scopedSessionIds.sort((a, b) => {
+    const aRecordedAt = scopedResults.find((entry) => entry.sessionId === a)?.recordedAt;
+    const bRecordedAt = scopedResults.find((entry) => entry.sessionId === b)?.recordedAt;
+    return new Date(bRecordedAt || 0).getTime() - new Date(aRecordedAt || 0).getTime();
+  });
+
+  const sessionOptions = [
+    `<option value="${LATEST_SESSION_OPTION}">Latest Run</option>`,
+    `<option value="${ALL_SESSIONS_OPTION}">All Runs</option>`,
+    ...sortedSessionIds.map((sessionId) => {
+      const sessionEntry = scopedResults.find((entry) => entry.sessionId === sessionId);
+      const timestamp = sessionEntry ? new Date(sessionEntry.recordedAt) : null;
+      const runLabel = timestamp ? timestamp.toLocaleString() : sessionId;
+      return `<option value="${sessionId}">${runLabel}</option>`;
+    }),
+  ];
+
+  resultsSessionFilter.innerHTML = sessionOptions.join("");
+  if (
+    resultsSessionFilterValue !== LATEST_SESSION_OPTION &&
+    resultsSessionFilterValue !== ALL_SESSIONS_OPTION &&
+    !sortedSessionIds.includes(resultsSessionFilterValue)
+  ) {
+    resultsSessionFilterValue = LATEST_SESSION_OPTION;
+  }
+  resultsSessionFilter.value = resultsSessionFilterValue;
+  resultsSessionFilter.disabled = sortedSessionIds.length === 0;
 }
 
 function renderResultsContext(filteredResults) {
@@ -871,11 +950,18 @@ function renderResultsContext(filteredResults) {
     resultsRaceFilterValue === ALL_RACES_OPTION ? "All Races" : getRaceNameById(resultsRaceFilterValue);
   const heatLabel =
     resultsHeatFilterValue === ALL_HEATS_OPTION ? "All Heats" : `Heat ${resultsHeatFilterValue}`;
+  const runLabel =
+    resultsSessionFilterValue === LATEST_SESSION_OPTION
+      ? "Latest Run"
+      : resultsSessionFilterValue === ALL_SESSIONS_OPTION
+        ? "All Runs"
+        : "Selected Run";
 
   resultsContext.innerHTML = `
     <div class="results-chip"><strong>Meet:</strong> ${meetName}</div>
     <div class="results-chip"><strong>Race:</strong> ${raceLabel}</div>
     <div class="results-chip"><strong>Heat:</strong> ${heatLabel}</div>
+    <div class="results-chip"><strong>Run:</strong> ${runLabel}</div>
     <div class="results-chip"><strong>Laps:</strong> ${filteredResults.length}</div>
   `;
 }
@@ -905,11 +991,10 @@ function renderResultsSummary(filteredResults) {
   });
 
   const runnersWithLaps = runnerGroups.size;
-  const winnerCandidate = Array.from(runnerGroups.values()).reduce((best, runner) => {
-    const finishTime = Math.max(...runner.laps.map((lap) => lap.totalTime));
-
-    if (!best || finishTime < best.finishTime) {
-      return { runnerName: runner.runnerName, finishTime };
+  const finishEntries = filteredResults.filter((entry) => entry.isFinishLap);
+  const winnerCandidate = finishEntries.reduce((best, entry) => {
+    if (!best || entry.totalTime < best.finishTime) {
+      return { runnerName: entry.runnerName, finishTime: entry.totalTime };
     }
 
     return best;
@@ -920,7 +1005,7 @@ function renderResultsSummary(filteredResults) {
     <div class="summary-item"><strong>Total Laps:</strong> ${filteredResults.length}</div>
     <div class="summary-item"><strong>Fastest Lap:</strong> ${formatTime(fastestLap)}</div>
     <div class="summary-item"><strong>Average Lap:</strong> ${formatTime(averageLap)}</div>
-    ${winnerCandidate ? `<div class="summary-item"><strong>Fastest Finish:</strong> ${winnerCandidate.runnerName} (${formatTime(winnerCandidate.finishTime)})</div>` : ""}
+    ${winnerCandidate ? `<div class="summary-item"><strong>Fastest Finish:</strong> ${winnerCandidate.runnerName} (${formatTime(winnerCandidate.finishTime)})</div>` : '<div class="summary-item"><strong>Fastest Finish:</strong> No finished runners in this scope.</div>'}
   `;
 
   const maxLapTime = Math.max(...filteredResults.map((entry) => entry.lapTime));
@@ -1044,6 +1129,14 @@ function renderGroupedResults(filteredResults) {
 function renderResults() {
   renderResultsFilters();
   const filteredResults = getResultsInScope();
+  const hasResults = filteredResults.length > 0;
+  exportResultsButton.disabled = !hasResults;
+  clearResultsScopeButton.disabled = !hasResults;
+
+  if (hasResults) {
+    resultsActionMessage.textContent = "";
+  }
+
   renderResultsContext(filteredResults);
   renderResultsSummary(filteredResults);
   renderGroupedResults(filteredResults);
@@ -1054,8 +1147,14 @@ function getResultsScopeLabel() {
   const raceLabel =
     resultsRaceFilterValue === ALL_RACES_OPTION ? "all-races" : getRaceNameById(resultsRaceFilterValue);
   const heatLabel = resultsHeatFilterValue === ALL_HEATS_OPTION ? "all-heats" : `heat-${resultsHeatFilterValue}`;
+  const runLabel =
+    resultsSessionFilterValue === LATEST_SESSION_OPTION
+      ? "latest-run"
+      : resultsSessionFilterValue === ALL_SESSIONS_OPTION
+        ? "all-runs"
+        : "selected-run";
 
-  return `${meetLabel}-${raceLabel}-${heatLabel}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return `${meetLabel}-${raceLabel}-${heatLabel}-${runLabel}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
 function escapeCsvValue(value) {
@@ -1072,6 +1171,7 @@ function exportResultsScope() {
   const scopedResults = getResultsInScope();
 
   if (scopedResults.length === 0) {
+    resultsActionMessage.textContent = "No saved laps in this scope to export.";
     return;
   }
 
@@ -1098,26 +1198,40 @@ function exportResultsScope() {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  resultsActionMessage.textContent = `Exported ${scopedResults.length} lap${scopedResults.length === 1 ? "" : "s"} for this scope.`;
 }
 
 function clearResultsScope() {
   const scopedResults = getResultsInScope();
 
   if (scopedResults.length === 0) {
+    resultsActionMessage.textContent = "No saved laps in this scope to clear.";
     return;
   }
 
+  const meetLabel = resultsMeetFilterValue ? getMeetNameById(resultsMeetFilterValue) : "All Meets";
+  const raceLabel = resultsRaceFilterValue === ALL_RACES_OPTION ? "All Races" : getRaceNameById(resultsRaceFilterValue);
+  const heatLabel = resultsHeatFilterValue === ALL_HEATS_OPTION ? "All Heats" : `Heat ${resultsHeatFilterValue}`;
+  const runLabel =
+    resultsSessionFilterValue === LATEST_SESSION_OPTION
+      ? "Latest Run"
+      : resultsSessionFilterValue === ALL_SESSIONS_OPTION
+        ? "All Runs"
+        : "Selected Run";
+
   const confirmed = window.confirm(
-    `Delete ${scopedResults.length} saved lap${scopedResults.length === 1 ? "" : "s"} in the current Results scope?`
+    `Delete ${scopedResults.length} saved lap${scopedResults.length === 1 ? "" : "s"} for ${meetLabel} / ${raceLabel} / ${heatLabel} / ${runLabel}?`
   );
 
   if (!confirmed) {
+    resultsActionMessage.textContent = "Clear cancelled.";
     return;
   }
 
   const scopedIds = new Set(scopedResults.map((entry) => entry.id));
   results = results.filter((entry) => !scopedIds.has(entry.id));
   saveResults();
+  resultsActionMessage.textContent = `Cleared ${scopedResults.length} lap${scopedResults.length === 1 ? "" : "s"} from this scope.`;
   renderResults();
 }
 
@@ -1272,10 +1386,15 @@ function recordLap(runnerId) {
   });
 
   const latestLap = runner.laps[runner.laps.length - 1];
+  if (!currentResultSessionId) {
+    currentResultSessionId = createResultSessionId();
+  }
+
   appendResultRecord({
     meetId: activeMeetId,
     raceId: activeAssignment.raceId,
     heatNumber: activeAssignment.heatNumber,
+    sessionId: currentResultSessionId,
     runnerId: runner.id,
     runnerName: runner.name,
     lapNumber: latestLap.number,
@@ -1322,10 +1441,15 @@ function finishRunner(runnerId) {
     });
 
     const latestLap = runner.laps[runner.laps.length - 1];
+    if (!currentResultSessionId) {
+      currentResultSessionId = createResultSessionId();
+    }
+
     appendResultRecord({
       meetId: activeMeetId,
       raceId: activeAssignment.raceId,
       heatNumber: activeAssignment.heatNumber,
+      sessionId: currentResultSessionId,
       runnerId: runner.id,
       runnerName: runner.name,
       lapNumber: latestLap.number,
@@ -1366,6 +1490,10 @@ startButton.addEventListener("click", function () {
     activeHeatNumber = selectedRaceHeat.heatNumber;
   }
 
+  if (startTime === null && elapsedTime === 0) {
+    currentResultSessionId = createResultSessionId();
+  }
+
   startTime = Date.now() - elapsedTime;
 
   if (timerInterval === null) {
@@ -1385,6 +1513,7 @@ resetButton.addEventListener("click", function () {
   timerInterval = null;
   startTime = null;
   elapsedTime = 0;
+  currentResultSessionId = null;
   timerDisplay.textContent = "00:00.00";
 
   runners.forEach((runner) => {
@@ -1489,17 +1618,25 @@ resultsMeetFilter.addEventListener("change", function () {
   resultsMeetFilterValue = resultsMeetFilter.value;
   resultsRaceFilterValue = ALL_RACES_OPTION;
   resultsHeatFilterValue = ALL_HEATS_OPTION;
+  resultsSessionFilterValue = LATEST_SESSION_OPTION;
   renderResults();
 });
 
 resultsRaceFilter.addEventListener("change", function () {
   resultsRaceFilterValue = resultsRaceFilter.value;
   resultsHeatFilterValue = ALL_HEATS_OPTION;
+  resultsSessionFilterValue = LATEST_SESSION_OPTION;
   renderResults();
 });
 
 resultsHeatFilter.addEventListener("change", function () {
   resultsHeatFilterValue = resultsHeatFilter.value;
+  resultsSessionFilterValue = LATEST_SESSION_OPTION;
+  renderResults();
+});
+
+resultsSessionFilter.addEventListener("change", function () {
+  resultsSessionFilterValue = resultsSessionFilter.value;
   renderResults();
 });
 

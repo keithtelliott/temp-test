@@ -129,11 +129,18 @@
           <select id="resultsHeatFilter" aria-label="Filter results by heat"></select>
         </label>
 
+        <label class="results-filter">
+          <span>Run</span>
+          <select id="resultsSessionFilter" aria-label="Filter results by run"></select>
+        </label>
+
         <div class="results-actions" aria-label="Results actions">
           <button id="exportResultsButton" type="button">Export Scope CSV</button>
           <button id="clearResultsScopeButton" type="button">Clear Scope</button>
         </div>
       </section>
+
+      <p id="resultsActionMessage" class="results-action-message" aria-live="polite"></p>
 
       <div id="resultsContext" class="results-context"></div>
 

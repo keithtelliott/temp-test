@@ -528,7 +528,7 @@ button {
 
 .results-toolbar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin: 0 0 14px;
   align-items: end;
@@ -555,6 +555,13 @@ button {
   flex-wrap: wrap;
 }
 
+.results-action-message {
+  min-height: 20px;
+  margin: -6px 0 12px;
+  color: #35527a;
+  font-size: 14px;
+}
+
 #exportResultsButton {
   background: #0f766e;
   color: white;
@@ -563,6 +570,12 @@ button {
 #clearResultsScopeButton {
   background: #a33d2e;
   color: white;
+}
+
+#exportResultsButton:disabled,
+#clearResultsScopeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .results-context {
