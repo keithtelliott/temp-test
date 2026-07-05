@@ -1,39 +1,64 @@
-# Track Lap Timer
+# Lap Track
 
-A simple web app for track coaches to count and time laps during races.
+Lap Track is migrating from a single-file vanilla JavaScript app to a modular React + TypeScript architecture.
 
-## Features
+This repository now contains:
 
-- Shared race timer for all runners
-- Add runner names dynamically
-- One button per runner to record laps quickly
-- Show lap number, lap time, and total time for each runner
-- Reset race data and timer
+- A new Vite + React + TypeScript app (primary implementation target)
+- Redux Toolkit store and typed domain slices for meet/race/runner/result modules
+- Tailwind CSS v4 + shadcn/ui component foundation
+- Legacy app files preserved for parity checks during migration
 
-## Usage
+## Current Migration Status
 
-1. Enter a runner name and click `Add Runner`.
-2. Click `Start Race` to begin the shared timer.
-3. For each runner:
-   - Tap `Lap` button to record each lap.
-   - Tap `Finish` button to record when the runner completes the race.
-4. Use `Stop` to pause the timer and `Reset` to clear all race data.
+Phase started:
+
+- Vite + TypeScript scaffold complete
+- shadcn/ui initialized
+- Initial domain types and feature slices created
+- App shell and tab framework in place
+
+Phase in progress:
+
+- Port legacy timer and results behaviors into typed feature modules
+- Rebuild each tab flow with feature parity before adding collaboration features
+
+## Folder Guide
+
+- src/app: app-wide providers, typed hooks, and store setup
+- src/features: feature slices and UI modules (runners, races, meets, results, layout)
+- src/shared: shared types and utilities
+- src/components/ui: shadcn/ui components
+- legacy: preserved pre-migration app (reference only)
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run locally:
+
+```bash
+npm run dev
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+Lint:
+
+```bash
+npm run lint
+```
 
 ## Notes
 
-- Runner names remain after reset so the same roster can be used again.
-- Lap times are calculated from the runner's previous lap or race start.
-- Each runner finishes independently; the shared timer continues until stopped.
-- Once a runner is marked finished, no further laps can be recorded for that runner.
-- Finish time is captured from the shared race clock at the moment of finish.
-
-## Future Ideas
-
-- Create a list of runners
-- Create a meet that includes various races
-- Save race results
-- Export to CSV
-- Support heats
-- Support relay teams
-- Highlight fastest lap
-- Undo last tap
+- The source of truth during migration is the new TypeScript app in src.
+- The legacy folder is retained to verify behavior while each feature is ported.
+- Collaboration and social features are planned after feature parity milestone completion.
